@@ -1,6 +1,27 @@
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { MOCK_PRODUCTS, Product } from '../data/mockProducts';
 
+// Helper to wrap Supabase operations with a fast 1.5-second timeout threshold.
+// If the sandbox database is sleeping, offline, or blocked, it drops the query
+// and triggers the local storage fallback instantly instead of hanging the UI.
+const withTimeout = (promise: any, ms: number = 1500): Promise<any> => {
+  return new Promise<any>((resolve, reject) => {
+    const timer = setTimeout(() => {
+      reject(new Error("Database query timed out"));
+    }, ms);
+
+    Promise.resolve(promise)
+      .then((res) => {
+        clearTimeout(timer);
+        resolve(res);
+      })
+      .catch((err) => {
+        clearTimeout(timer);
+        reject(err);
+      });
+  });
+};
+
 export interface OrderItem {
   id: string;
   product_id: string;
@@ -153,10 +174,12 @@ export const dbService = {
   async getProducts(): Promise<Product[]> {
     if (isSupabaseConfigured && supabase) {
       try {
-        const { data, error } = await supabase
-          .from('products')
-          .select('*')
-          .order('created_at', { ascending: false });
+        const { data, error } = await withTimeout(
+          supabase
+            .from('products')
+            .select('*')
+            .order('created_at', { ascending: false })
+        );
         if (!error && data) return data;
         console.warn("Supabase fetch failed, falling back to localStorage", error);
       } catch (e) {
@@ -170,11 +193,13 @@ export const dbService = {
   async getProductById(id: string): Promise<Product | null> {
     if (isSupabaseConfigured && supabase) {
       try {
-        const { data, error } = await supabase
-          .from('products')
-          .select('*')
-          .eq('id', id)
-          .single();
+        const { data, error } = await withTimeout(
+          supabase
+            .from('products')
+            .select('*')
+            .eq('id', id)
+            .single()
+        );
         if (!error && data) return data;
       } catch (e) {
         console.warn("Supabase product by id fetch network error, falling back to localStorage", e);
@@ -197,11 +222,13 @@ export const dbService = {
 
     if (isSupabaseConfigured && supabase) {
       try {
-        const { data, error } = await supabase
-          .from('products')
-          .upsert(finalProduct)
-          .select()
-          .single();
+        const { data, error } = await withTimeout(
+          supabase
+            .from('products')
+            .upsert(finalProduct)
+            .select()
+            .single()
+        );
         if (!error && data) return data;
         console.warn("Supabase save failed, falling back to localStorage", error);
       } catch (e) {
@@ -223,10 +250,12 @@ export const dbService = {
   async deleteProduct(id: string): Promise<boolean> {
     if (isSupabaseConfigured && supabase) {
       try {
-        const { error } = await supabase
-          .from('products')
-          .delete()
-          .eq('id', id);
+        const { error } = await withTimeout(
+          supabase
+            .from('products')
+            .delete()
+            .eq('id', id)
+        );
         if (!error) return true;
         console.warn("Supabase delete failed, falling back to localStorage", error);
       } catch (e) {
@@ -244,10 +273,12 @@ export const dbService = {
   async getOrders(): Promise<Order[]> {
     if (isSupabaseConfigured && supabase) {
       try {
-        const { data, error } = await supabase
-          .from('orders')
-          .select('*, order_items(*)')
-          .order('created_at', { ascending: false });
+        const { data, error } = await withTimeout(
+          supabase
+            .from('orders')
+            .select('*, order_items(*)')
+            .order('created_at', { ascending: false })
+        );
         if (!error && data) {
           // Map Supabase layout to client layout
           const mapped = data.map((o: any) => ({
@@ -270,11 +301,13 @@ export const dbService = {
   async getOrderById(id: string): Promise<Order | null> {
     if (isSupabaseConfigured && supabase) {
       try {
-        const { data, error } = await supabase
-          .from('orders')
-          .select('*, order_items(*)')
-          .eq('id', id)
-          .single();
+        const { data, error } = await withTimeout(
+          supabase
+            .from('orders')
+            .select('*, order_items(*)')
+            .eq('id', id)
+            .single()
+        );
         if (!error && data) {
           return {
             ...data,
@@ -329,17 +362,19 @@ export const dbService = {
     if (useSupabase) {
       try {
         const productIds = cartItems.map(item => item.product.id);
-        const { data, error } = await supabase!
-          .from('products')
-          .select('id, stock, name')
-          .in('id', productIds);
+        const { data, error } = await withTimeout(
+          supabase!
+            .from('products')
+            .select('id, stock, name')
+            .in('id', productIds)
+        );
         
         if (error) throw error;
         
         if (data) {
           fetchedProductsData = data;
           for (const item of cartItems) {
-            const dbProd = data.find(p => p.id === item.product.id);
+            const dbProd = data.find((p: any) => p.id === item.product.id);
             if (dbProd) {
               if (dbProd.stock < item.quantity) {
                 throw new Error(`Insufficient stock for ${dbProd.name}. Only ${dbProd.stock} units available.`);
@@ -365,7 +400,7 @@ export const dbService = {
 
     // 2. Decrease stock levels (local fallback always runs to keep states synchronized)
     const products = await this.getProducts();
-    const updatedProducts = products.map(p => {
+    const updatedProducts = products.map((p: Product) => {
       const cartItem = cartItems.find(item => item.product.id === p.id);
       if (cartItem) {
         return {
@@ -381,22 +416,24 @@ export const dbService = {
     if (useSupabase) {
       try {
         // Create order row
-        const { data: dbOrder, error: orderErr } = await supabase!
-          .from('orders')
-          .insert({
-            id: orderId,
-            customer_id: newOrder.customer_id,
-            customer_name: newOrder.customer_name,
-            customer_phone: newOrder.customer_phone,
-            customer_address: newOrder.customer_address,
-            customer_city: newOrder.customer_city,
-            customer_pincode: newOrder.customer_pincode,
-            payment_method: newOrder.payment_method,
-            total_amount: newOrder.total_amount,
-            status: newOrder.status
-          })
-          .select()
-          .single();
+        const { data: dbOrder, error: orderErr } = await withTimeout(
+          supabase!
+            .from('orders')
+            .insert({
+              id: orderId,
+              customer_id: newOrder.customer_id,
+              customer_name: newOrder.customer_name,
+              customer_phone: newOrder.customer_phone,
+              customer_address: newOrder.customer_address,
+              customer_city: newOrder.customer_city,
+              customer_pincode: newOrder.customer_pincode,
+              payment_method: newOrder.payment_method,
+              total_amount: newOrder.total_amount,
+              status: newOrder.status
+            })
+            .select()
+            .single()
+        );
 
         if (orderErr) throw orderErr;
 
@@ -412,11 +449,13 @@ export const dbService = {
             image_url: item.image_url
           }));
           
-          const { error: itemsErr } = await supabase!.from('order_items').insert(dbItems);
+          const { error: itemsErr } = await withTimeout(
+            supabase!.from('order_items').insert(dbItems)
+          );
           if (itemsErr) {
             console.error("Supabase order_items insert failed:", itemsErr);
             // Rollback order row if items fail
-            await supabase!.from('orders').delete().eq('id', orderId);
+            await withTimeout(supabase!.from('orders').delete().eq('id', orderId));
             throw itemsErr;
           }
 
@@ -426,10 +465,12 @@ export const dbService = {
             const dbProd = fetchedProductsData?.find(p => p.id === item.product.id);
             const currentStock = dbProd ? dbProd.stock : item.product.stock;
             
-            return supabaseClient
-              .from('products')
-              .update({ stock: Math.max(0, currentStock - item.quantity) })
-              .eq('id', item.product.id);
+            return withTimeout(
+              supabaseClient
+                .from('products')
+                .update({ stock: Math.max(0, currentStock - item.quantity) })
+                .eq('id', item.product.id)
+            );
           });
           
           const updateResults = await Promise.all(stockUpdates);
@@ -464,39 +505,66 @@ export const dbService = {
 
   async updateOrderStatus(orderId: string, status: OrderStatus): Promise<Order | null> {
     if (isSupabaseConfigured && supabase) {
-      const { data, error } = await supabase
-        .from('orders')
-        .update({ status })
-        .eq('id', orderId)
-        .select()
-        .single();
-      
-      if (!error && data) {
-        // Retrieve order details to get items for stock restoration on cancellation
-        const order = await this.getOrderById(orderId);
-        if (order) {
-          order.status = status;
-          
-          if (status === 'cancelled' && order.items) {
-            for (const item of order.items) {
-              const { data: prod } = await supabase
-                .from('products')
-                .select('stock')
-                .eq('id', item.product_id)
-                .single();
-              
-              if (prod) {
-                await supabase
-                  .from('products')
-                  .update({ stock: prod.stock + item.quantity })
-                  .eq('id', item.product_id);
-              }
+      try {
+        const { data, error } = await withTimeout(
+          supabase
+            .from('orders')
+            .update({ status })
+            .eq('id', orderId)
+            .select()
+            .single()
+        );
+        
+        if (error) throw error;
+        
+        if (data) {
+          // Retrieve order details to get items for stock restoration on cancellation
+          const order = await this.getOrderById(orderId);
+          if (order) {
+            order.status = status;
+            
+            if (status === 'cancelled' && order.items) {
+              const stockRestorations = order.items.map(async (item) => {
+                try {
+                  const { data: prod } = await withTimeout(
+                    supabase!
+                      .from('products')
+                      .select('stock')
+                      .eq('id', item.product_id)
+                      .single()
+                  );
+                  
+                  if (prod) {
+                    await withTimeout(
+                      supabase!
+                        .from('products')
+                        .update({ stock: prod.stock + item.quantity })
+                        .eq('id', item.product_id)
+                    );
+                  }
+                } catch (e) {
+                  console.warn("Stock restoration failed for product", item.product_id, e);
+                }
+              });
+              await Promise.all(stockRestorations);
             }
+
+            // Sync locally cached orders
+            const cachedOrders = localStorage.getItem('onam_orders_cache');
+            if (cachedOrders) {
+              try {
+                const parsed = JSON.parse(cachedOrders) as Order[];
+                const updated = parsed.map(o => o.id === orderId ? { ...o, status } : o);
+                localStorage.setItem('onam_orders_cache', JSON.stringify(updated));
+              } catch (e) {}
+            }
+            
+            return order;
           }
-          return order;
         }
+      } catch (err: any) {
+        console.warn("Supabase order update failed, falling back to localStorage", err);
       }
-      console.warn("Supabase order update failed, falling back to localStorage", error);
     }
 
     const orders = await this.getOrders();

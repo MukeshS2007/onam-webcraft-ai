@@ -11,11 +11,24 @@ export const OrderHistory: React.FC = () => {
   const [loading, setLoading] = useState(true);
 
   const fetchOrders = async () => {
-    setLoading(true);
+    const customerId = user?.id || 'cust-1'; // fallback to demo customer
+    
+    // 1. Try loading from cache instantly
+    const cached = localStorage.getItem('onam_orders_cache');
+    if (cached) {
+      try {
+        const parsed = JSON.parse(cached) as Order[];
+        const filtered = parsed.filter(o => o.customer_id === customerId);
+        setOrders(filtered);
+        setLoading(false);
+      } catch (e) {}
+    } else {
+      setLoading(true);
+    }
+
+    // 2. Fetch fresh orders from Supabase
     try {
       const allOrders = await dbService.getOrders();
-      // Filter orders by current customer
-      const customerId = user?.id || 'cust-1'; // fallback to demo customer
       const filtered = allOrders.filter(o => o.customer_id === customerId);
       setOrders(filtered);
     } catch (e) {
