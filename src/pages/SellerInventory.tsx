@@ -169,7 +169,7 @@ export const SellerInventory: React.FC = () => {
                     if (stockVal === 0) {
                       return <span className="bg-rose-50 border border-rose-200 text-rose-700 text-[10px] font-bold uppercase px-2.5 py-1 rounded-full">Out of Stock</span>;
                     }
-                    if (stockVal <= 5) {
+                    if (stockVal <= 10) {
                       return <span className="bg-amber-50 border border-amber-200 text-amber-700 text-[10px] font-bold uppercase px-2.5 py-1 rounded-full">Low Stock</span>;
                     }
                     return <span className="bg-emerald-50 border border-emerald-200 text-emerald-700 text-[10px] font-bold uppercase px-2.5 py-1 rounded-full">In Stock</span>;

@@ -30,11 +30,35 @@ export const SellerOrders: React.FC = () => {
     fetchSellerOrders();
   }, [user]);
 
+  const isValidTransition = (oldStatus: OrderStatus, newStatus: OrderStatus): boolean => {
+    if (oldStatus === newStatus) return true;
+    if (oldStatus === 'cancelled' || oldStatus === 'delivered') return false;
+    
+    const sequence: OrderStatus[] = ['pending', 'confirmed', 'packed', 'shipped', 'out_for_delivery', 'delivered'];
+    const oldIdx = sequence.indexOf(oldStatus);
+    const newIdx = sequence.indexOf(newStatus);
+    
+    if (newStatus === 'cancelled') {
+      return oldStatus === 'pending' || oldStatus === 'confirmed' || oldStatus === 'packed';
+    }
+    
+    if (oldIdx === -1 || newIdx === -1) return false;
+    return newIdx > oldIdx;
+  };
+
   const handleUpdateStatus = async (orderId: string, newStatus: OrderStatus) => {
+    const order = orders.find(o => o.id === orderId);
+    if (!order) return;
+
+    if (!isValidTransition(order.status, newStatus)) {
+      addToast(`Invalid transition from ${order.status} to ${newStatus}`, "error");
+      return;
+    }
+
     try {
       const updated = await dbService.updateOrderStatus(orderId, newStatus);
       if (updated) {
-        addToast(`Order ${orderId} updated to ${newStatus}`, 'success');
+        addToast(`Order updated to ${newStatus} successfully!`, 'success');
         fetchSellerOrders();
       }
     } catch (e) {
