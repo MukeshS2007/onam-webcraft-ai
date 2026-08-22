@@ -17,6 +17,7 @@ export interface ToastMessage {
 
 interface AppContextType {
   user: UserProfile | null;
+  authLoading: boolean;
   switchUserRole: (role: 'customer' | 'seller') => void;
   updateProfile: (profile: Partial<UserProfile>) => void;
   
@@ -43,6 +44,7 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   // Auth state
   const [user, setUser] = useState<UserProfile | null>(null);
+  const [authLoading, setAuthLoading] = useState(true);
 
   // Cart state
   const [cart, setCart] = useState<CartItem[]>([]);
@@ -65,6 +67,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         console.warn("Failed to restore session, using local cache", err);
         const currentUser = dbService.getCurrentUser();
         setUser(currentUser);
+      } finally {
+        setAuthLoading(false);
       }
     };
     restoreSession();
@@ -218,6 +222,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     <AppContext.Provider
       value={{
         user,
+        authLoading,
         switchUserRole,
         updateProfile,
         login,

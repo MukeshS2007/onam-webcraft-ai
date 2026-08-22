@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
-import { Outlet, Navigate, Link } from 'react-router-dom';
+import { Outlet, Navigate, Link, useNavigate } from 'react-router-dom';
 import { Menu, X, ShieldCheck, User, LogOut } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { SellerSidebar } from '../components/SellerSidebar';
 import { ToastContainer } from '../components/Toast';
 
 export const SellerLayout: React.FC = () => {
-  const { user, switchUserRole } = useApp();
+  const { user, logout, switchUserRole } = useApp();
+  const navigate = useNavigate();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   // Protection: if user is not a seller, redirect to login
@@ -110,7 +111,10 @@ export const SellerLayout: React.FC = () => {
             <hr className="hidden md:block h-8 border-l border-onam-gold/20" />
 
             <button
-              onClick={() => switchUserRole('customer')}
+              onClick={async () => {
+                await logout();
+                navigate('/login');
+              }}
               className="text-xs font-bold text-rose-600 hover:text-rose-800 flex items-center gap-1.5 px-3 py-1.5 rounded-lg hover:bg-rose-50 transition-colors"
             >
               <LogOut className="w-4 h-4" />

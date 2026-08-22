@@ -24,7 +24,10 @@ import { SellerInventory } from './pages/SellerInventory';
 
 // Route Guards
 const CustomerRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { user } = useApp();
+  const { user, authLoading } = useApp();
+  if (authLoading) {
+    return <div className="min-h-screen bg-onam-cream flex items-center justify-center font-serif text-onam-green text-lg">Loading secure session...</div>;
+  }
   if (!user) {
     return <Navigate to="/login" replace />;
   }
@@ -32,7 +35,10 @@ const CustomerRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =>
 };
 
 const SellerRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { user } = useApp();
+  const { user, authLoading } = useApp();
+  if (authLoading) {
+    return <div className="min-h-screen bg-onam-cream flex items-center justify-center font-serif text-onam-green text-lg">Loading secure session...</div>;
+  }
   if (!user) {
     return <Navigate to="/login" replace />;
   }
