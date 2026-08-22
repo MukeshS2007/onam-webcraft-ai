@@ -244,6 +244,7 @@ export const dbService = {
       updatedProducts = products.map(p => p.id === finalProduct.id ? finalProduct : p);
     }
     localStorage.setItem('onam_products', JSON.stringify(updatedProducts));
+    localStorage.setItem('onam_products_cache', JSON.stringify(updatedProducts));
     return finalProduct;
   },
 
@@ -266,6 +267,7 @@ export const dbService = {
     const products = await this.getProducts();
     const filtered = products.filter(p => p.id !== id);
     localStorage.setItem('onam_products', JSON.stringify(filtered));
+    localStorage.setItem('onam_products_cache', JSON.stringify(filtered));
     return true;
   },
 
@@ -411,6 +413,7 @@ export const dbService = {
       return p;
     });
     localStorage.setItem('onam_products', JSON.stringify(updatedProducts));
+    localStorage.setItem('onam_products_cache', JSON.stringify(updatedProducts));
 
     // 3. Supabase order placement
     if (useSupabase) {
@@ -593,6 +596,7 @@ export const dbService = {
           return p;
         });
         localStorage.setItem('onam_products', JSON.stringify(revertedProducts));
+        localStorage.setItem('onam_products_cache', JSON.stringify(revertedProducts));
       }
     }
 
