@@ -75,8 +75,8 @@ export const OrderDetail: React.FC = () => {
     );
   }
 
-  // Can cancel only if order status is placed, confirmed, or packed (not reached shipped)
-  const canCancel = order.status === 'placed' || order.status === 'confirmed' || order.status === 'packed';
+  // Can cancel only if order status is pending or confirmed
+  const canCancel = order.status === 'pending' || order.status === 'confirmed';
 
   return (
     <div className="space-y-6 max-w-4xl mx-auto">

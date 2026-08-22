@@ -11,7 +11,7 @@ export interface OrderItem {
   image_url: string;
 }
 
-export type OrderStatus = 'placed' | 'confirmed' | 'packed' | 'shipped' | 'out_for_delivery' | 'delivered' | 'cancelled';
+export type OrderStatus = 'pending' | 'confirmed' | 'packed' | 'shipped' | 'out_for_delivery' | 'delivered' | 'cancelled';
 
 export interface Order {
   id: string;
@@ -109,7 +109,7 @@ const SEED_ORDERS: Order[] = [
     customer_pincode: "695023",
     payment_method: "cod",
     total_amount: 2148, // 1899 + 249
-    status: "placed",
+    status: "pending",
     created_at: new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString(),
     items: [
       {
@@ -293,7 +293,7 @@ export const dbService = {
       id: orderId,
       customer_id: currentUser?.id || 'guest',
       total_amount: totalAmount,
-      status: 'placed',
+      status: 'pending',
       created_at: new Date().toISOString(),
       items
     };

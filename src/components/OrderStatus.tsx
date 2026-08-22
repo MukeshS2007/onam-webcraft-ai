@@ -9,7 +9,7 @@ interface OrderStatusProps {
 export const OrderStatus: React.FC<OrderStatusProps> = ({ status }) => {
   const steps: { key: StatusType; label: string; icon: React.ComponentType<{ className?: string }>; desc: string }[] = [
     {
-      key: 'placed',
+      key: 'pending',
       label: 'Order Placed',
       icon: ClipboardList,
       desc: 'Seller notified'
@@ -64,7 +64,7 @@ export const OrderStatus: React.FC<OrderStatusProps> = ({ status }) => {
   // Note: if current status is "out_for_delivery", we can map it to "shipped" or treat it between shipped and delivered
   const getActiveIndex = () => {
     switch (status) {
-      case 'placed': return 0;
+      case 'pending': return 0;
       case 'confirmed': return 1;
       case 'packed': return 2;
       case 'shipped': return 3;

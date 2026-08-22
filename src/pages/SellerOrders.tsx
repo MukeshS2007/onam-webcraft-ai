@@ -45,7 +45,7 @@ export const SellerOrders: React.FC = () => {
   // Helper to determine the next status in the sequence for quick action buttons
   const getNextStatusAction = (status: OrderStatus): { nextStatus: OrderStatus; label: string } | null => {
     switch (status) {
-      case 'placed':
+      case 'pending':
         return { nextStatus: 'confirmed', label: 'Confirm Order' };
       case 'confirmed':
         return { nextStatus: 'packed', label: 'Mark Packed' };
@@ -177,7 +177,7 @@ export const SellerOrders: React.FC = () => {
                               : 'bg-amber-50 text-amber-700 border-amber-200'
                           }`}
                         >
-                          <option value="placed">Placed</option>
+                          <option value="pending">Pending</option>
                           <option value="confirmed">Confirmed</option>
                           <option value="packed">Packed</option>
                           <option value="shipped">Shipped</option>

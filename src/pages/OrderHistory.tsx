@@ -32,8 +32,8 @@ export const OrderHistory: React.FC = () => {
   // Status Badge Helper
   const getStatusBadge = (status: StatusType) => {
     switch (status) {
-      case 'placed':
-        return <span className="bg-blue-50 border border-blue-200 text-blue-700 text-[10px] font-bold uppercase px-2.5 py-1 rounded-full font-sans">Placed</span>;
+      case 'pending':
+        return <span className="bg-blue-50 border border-blue-200 text-blue-700 text-[10px] font-bold uppercase px-2.5 py-1 rounded-full font-sans">Pending</span>;
       case 'confirmed':
         return <span className="bg-amber-50 border border-amber-200 text-amber-700 text-[10px] font-bold uppercase px-2.5 py-1 rounded-full font-sans">Confirmed</span>;
       case 'packed':

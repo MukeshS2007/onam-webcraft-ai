@@ -103,8 +103,8 @@ export const SellerDashboard: React.FC = () => {
 
   const orderStatusBadge = (status: OrderStatus) => {
     switch (status) {
-      case 'placed':
-        return <span className="bg-blue-50 text-blue-700 text-[10px] font-bold px-2 py-0.5 rounded border border-blue-100 uppercase">Placed</span>;
+      case 'pending':
+        return <span className="bg-blue-50 text-blue-700 text-[10px] font-bold px-2 py-0.5 rounded border border-blue-100 uppercase">Pending</span>;
       case 'confirmed':
         return <span className="bg-amber-50 text-amber-700 text-[10px] font-bold px-2 py-0.5 rounded border border-amber-100 uppercase">Confirmed</span>;
       case 'packed':
