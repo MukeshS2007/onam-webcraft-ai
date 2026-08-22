@@ -1,6 +1,8 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { Product } from '../data/mockProducts';
 import { dbService, Order, UserProfile } from '../services/db';
+import { authService } from '../services/authService';
+import { supabase, isSupabaseConfigured } from '../lib/supabase';
 
 export interface CartItem {
   product: Product;
@@ -17,6 +19,11 @@ interface AppContextType {
   user: UserProfile | null;
   switchUserRole: (role: 'customer' | 'seller') => void;
   updateProfile: (profile: Partial<UserProfile>) => void;
+  
+  // Auth methods
+  login: (email: string, password: string, role: 'customer' | 'seller') => Promise<void>;
+  register: (email: string, name: string, phone: string, password: string) => Promise<void>;
+  logout: () => Promise<void>;
   
   cart: CartItem[];
   addToCart: (product: Product, quantity?: number) => void;
@@ -45,8 +52,22 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Load initial auth
   useEffect(() => {
-    const currentUser = dbService.getCurrentUser();
-    setUser(currentUser);
+    const restoreSession = async () => {
+      try {
+        const profile = await authService.getCurrentProfile();
+        if (profile) {
+          setUser(profile);
+        } else {
+          const currentUser = dbService.getCurrentUser();
+          setUser(currentUser);
+        }
+      } catch (err) {
+        console.warn("Failed to restore session, using local cache", err);
+        const currentUser = dbService.getCurrentUser();
+        setUser(currentUser);
+      }
+    };
+    restoreSession();
 
     // Load cart from local storage if available
     const savedCart = localStorage.getItem('onam_cart');
@@ -71,11 +92,43 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     addToast(`Switched to ${role === 'seller' ? 'Seller Dashboard' : 'Customer Store'}`, 'success');
   };
 
+  const login = async (email: string, password: string, role: 'customer' | 'seller') => {
+    const profile = await authService.signIn(email, password, role);
+    setUser(profile);
+  };
+
+  const register = async (email: string, name: string, phone: string, password: string) => {
+    const profile = await authService.signUp(email, name, phone, password);
+    setUser(profile);
+  };
+
+  const logout = async () => {
+    await authService.signOut();
+    setUser(null);
+    addToast("Logged out successfully", "info");
+  };
+
   const updateProfile = (profile: Partial<UserProfile>) => {
     if (!user) return;
     const updated = { ...user, ...profile };
     dbService.setCurrentUser(updated);
     setUser(updated);
+
+    if (isSupabaseConfigured && supabase) {
+      supabase.from('profiles')
+        .update({
+          name: updated.name,
+          phone: updated.phone,
+          address: updated.address,
+          city: updated.city,
+          pincode: updated.pincode
+        })
+        .eq('id', updated.id)
+        .then(({ error }) => {
+          if (error) console.error("Failed to update profile on Supabase:", error);
+        });
+    }
+
     addToast("Profile updated successfully!", "success");
   };
 
@@ -167,6 +220,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         user,
         switchUserRole,
         updateProfile,
+        login,
+        register,
+        logout,
         cart,
         addToCart,
         removeFromCart,

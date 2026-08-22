@@ -4,7 +4,7 @@ import { ShoppingCart, Search, Menu, X, User, ArrowRight, ShieldCheck } from 'lu
 import { useApp } from '../context/AppContext';
 
 export const Navbar: React.FC = () => {
-  const { cartCount, user, switchUserRole } = useApp();
+  const { cartCount, user, switchUserRole, logout } = useApp();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const navigate = useNavigate();
@@ -60,28 +60,30 @@ export const Navbar: React.FC = () => {
             )}
 
             {/* Quick Demo Switcher */}
-            <div className="flex items-center bg-onam-cream-dark rounded-full p-1 border border-onam-gold/20">
-              <button
-                onClick={() => switchUserRole('customer')}
-                className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${
-                  !isSeller 
-                    ? 'bg-onam-green text-onam-cream shadow-sm' 
-                    : 'text-onam-green hover:text-onam-gold'
-                }`}
-              >
-                Customer
-              </button>
-              <button
-                onClick={() => switchUserRole('seller')}
-                className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all flex items-center gap-1 ${
-                  isSeller 
-                    ? 'bg-onam-green text-onam-cream shadow-sm' 
-                    : 'text-onam-green hover:text-onam-gold'
-                }`}
-              >
-                <ShieldCheck className="w-3 h-3" /> Seller
-              </button>
-            </div>
+            {(!user || user.role === 'seller') && (
+              <div className="flex items-center bg-onam-cream-dark rounded-full p-1 border border-onam-gold/20">
+                <button
+                  onClick={() => switchUserRole('customer')}
+                  className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${
+                    !isSeller 
+                      ? 'bg-onam-green text-onam-cream shadow-sm' 
+                      : 'text-onam-green hover:text-onam-gold'
+                  }`}
+                >
+                  Customer
+                </button>
+                <button
+                  onClick={() => switchUserRole('seller')}
+                  className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all flex items-center gap-1 ${
+                    isSeller 
+                      ? 'bg-onam-green text-onam-cream shadow-sm' 
+                      : 'text-onam-green hover:text-onam-gold'
+                  }`}
+                >
+                  <ShieldCheck className="w-3 h-3" /> Seller
+                </button>
+              </div>
+            )}
 
             {/* Cart Icon */}
             <Link to="/cart" className="relative p-2 text-onam-green hover:text-onam-gold transition-colors hover:scale-105">
@@ -95,18 +97,44 @@ export const Navbar: React.FC = () => {
 
             {/* Account / Dashboard */}
             {isSeller ? (
-              <Link
-                to="/seller"
-                className="bg-onam-green text-onam-cream hover:bg-onam-green-light px-4 py-2 rounded-full text-sm font-semibold flex items-center gap-2 border border-onam-gold/30 shadow-md shadow-onam-green/10 transition-all hover:translate-y-[-1px]"
-              >
-                <ShieldCheck className="w-4 h-4 text-onam-gold" /> Dashboard
-              </Link>
+              <div className="flex items-center gap-3">
+                <Link
+                  to="/seller"
+                  className="bg-onam-green text-onam-cream hover:bg-onam-green-light px-4 py-2 rounded-full text-sm font-semibold flex items-center gap-2 border border-onam-gold/30 shadow-md shadow-onam-green/10 transition-all hover:translate-y-[-1px]"
+                >
+                  <ShieldCheck className="w-4 h-4 text-onam-gold" /> Dashboard
+                </Link>
+                <button
+                  onClick={async () => {
+                    await logout();
+                    navigate('/');
+                  }}
+                  className="text-xs text-rose-600 hover:text-rose-700 font-bold hover:underline cursor-pointer border border-rose-200 hover:border-rose-300 px-3.5 py-2 rounded-full transition-all bg-rose-50/50 font-sans"
+                >
+                  Sign Out
+                </button>
+              </div>
+            ) : user ? (
+              <div className="flex items-center gap-3">
+                <span className="border border-onam-green text-onam-green px-4 py-2 rounded-full text-sm font-semibold flex items-center gap-1.5">
+                  <User className="w-4 h-4" /> {user.name.split(' ')[0]}
+                </span>
+                <button
+                  onClick={async () => {
+                    await logout();
+                    navigate('/');
+                  }}
+                  className="text-xs text-rose-600 hover:text-rose-700 font-bold hover:underline cursor-pointer border border-rose-200 hover:border-rose-300 px-3.5 py-2 rounded-full transition-all bg-rose-50/50 font-sans"
+                >
+                  Sign Out
+                </button>
+              </div>
             ) : (
               <Link
                 to="/login"
                 className="border border-onam-green text-onam-green hover:bg-onam-green hover:text-onam-cream px-4 py-2 rounded-full text-sm font-semibold flex items-center gap-1.5 transition-all"
               >
-                <User className="w-4 h-4" /> {user ? user.name.split(' ')[0] : 'Login'}
+                <User className="w-4 h-4" /> Login
               </Link>
             )}
           </div>
@@ -188,50 +216,55 @@ export const Navbar: React.FC = () => {
           <hr className="border-onam-gold/25" />
 
           {/* Quick Demo Switcher */}
-          <div className="px-4">
-            <span className="text-xs text-onam-charcoal/60 font-semibold block mb-2">Demo Role:</span>
-            <div className="flex items-center bg-onam-cream-dark rounded-full p-1 border border-onam-gold/20 max-w-[240px]">
-              <button
-                onClick={() => {
-                  switchUserRole('customer');
-                  setIsMobileMenuOpen(false);
-                }}
-                className={`flex-1 text-center py-1.5 rounded-full text-xs font-semibold transition-all ${
-                  !isSeller 
-                    ? 'bg-onam-green text-onam-cream' 
-                    : 'text-onam-green hover:text-onam-gold'
-                }`}
-              >
-                Customer
-              </button>
-              <button
-                onClick={() => {
-                  switchUserRole('seller');
-                  setIsMobileMenuOpen(false);
-                }}
-                className={`flex-1 text-center py-1.5 rounded-full text-xs font-semibold transition-all ${
-                  isSeller 
-                    ? 'bg-onam-green text-onam-cream' 
-                    : 'text-onam-green hover:text-onam-gold'
-                }`}
-              >
-                Seller
-              </button>
+          {(!user || user.role === 'seller') && (
+            <div className="px-4">
+              <span className="text-xs text-onam-charcoal/60 font-semibold block mb-2">Demo Role:</span>
+              <div className="flex items-center bg-onam-cream-dark rounded-full p-1 border border-onam-gold/20 max-w-[240px]">
+                <button
+                  onClick={() => {
+                    switchUserRole('customer');
+                    setIsMobileMenuOpen(false);
+                  }}
+                  className={`flex-1 text-center py-1.5 rounded-full text-xs font-semibold transition-all ${
+                    !isSeller 
+                      ? 'bg-onam-green text-onam-cream' 
+                      : 'text-onam-green hover:text-onam-gold'
+                  }`}
+                >
+                  Customer
+                </button>
+                <button
+                  onClick={() => {
+                    switchUserRole('seller');
+                    setIsMobileMenuOpen(false);
+                  }}
+                  className={`flex-1 text-center py-1.5 rounded-full text-xs font-semibold transition-all ${
+                    isSeller 
+                      ? 'bg-onam-green text-onam-cream' 
+                      : 'text-onam-green hover:text-onam-gold'
+                  }`}
+                >
+                  Seller
+                </button>
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Login/Logout Button */}
           <div className="px-4 pt-2">
             {user ? (
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium text-onam-charcoal">Logged in: <strong className="text-onam-green">{user.name}</strong></span>
-                <Link
-                  to="/login"
-                  onClick={() => setIsMobileMenuOpen(false)}
-                  className="text-xs text-rose-600 font-bold hover:underline"
+              <div className="flex items-center justify-between gap-4">
+                <span className="text-xs font-medium text-onam-charcoal truncate">Logged in: <strong className="text-onam-green">{user.name}</strong></span>
+                <button
+                  onClick={async () => {
+                    await logout();
+                    setIsMobileMenuOpen(false);
+                    navigate('/');
+                  }}
+                  className="text-xs text-rose-600 font-bold hover:underline cursor-pointer bg-rose-50 border border-rose-200 px-3 py-1.5 rounded-lg shrink-0 font-sans"
                 >
-                  Change Account
-                </Link>
+                  Sign Out
+                </button>
               </div>
             ) : (
               <Link

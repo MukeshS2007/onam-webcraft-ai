@@ -1,6 +1,6 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { AppProvider } from './context/AppContext';
+import { AppProvider, useApp } from './context/AppContext';
 
 // Layouts
 import { CustomerLayout } from './layouts/CustomerLayout';
@@ -22,6 +22,26 @@ import { SellerProducts } from './pages/SellerProducts';
 import { SellerOrders } from './pages/SellerOrders';
 import { SellerInventory } from './pages/SellerInventory';
 
+// Route Guards
+const CustomerRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { user } = useApp();
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
+  return <>{children}</>;
+};
+
+const SellerRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { user } = useApp();
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
+  if (user.role !== 'seller') {
+    return <Navigate to="/" replace />;
+  }
+  return <>{children}</>;
+};
+
 export const App: React.FC = () => {
   return (
     <AppProvider>
@@ -34,14 +54,14 @@ export const App: React.FC = () => {
             <Route path="products" element={<ProductList />} />
             <Route path="product/:id" element={<ProductDetail />} />
             <Route path="cart" element={<Cart />} />
-            <Route path="checkout" element={<Checkout />} />
-            <Route path="orders" element={<OrderHistory />} />
-            <Route path="orders/:id" element={<OrderDetail />} />
+            <Route path="checkout" element={<CustomerRoute><Checkout /></CustomerRoute>} />
+            <Route path="orders" element={<CustomerRoute><OrderHistory /></CustomerRoute>} />
+            <Route path="orders/:id" element={<CustomerRoute><OrderDetail /></CustomerRoute>} />
             <Route path="login" element={<Login />} />
           </Route>
 
           {/* Seller Routes (Sidebar + Admin Header) */}
-          <Route path="/seller" element={<SellerLayout />}>
+          <Route path="/seller" element={<SellerRoute><SellerLayout /></SellerRoute>}>
             <Route index element={<SellerDashboard />} />
             <Route path="products" element={<SellerProducts />} />
             <Route path="orders" element={<SellerOrders />} />
