@@ -19,36 +19,28 @@ export const ProductList: React.FC = () => {
   const [sortBy, setSortBy] = useState('rating-desc');
   const [showMobileFilters, setShowMobileFilters] = useState(false);
 
-  // Fetch products based on URL parameters
-  const fetchProducts = async () => {
-    setLoading(true);
-    try {
-      const search = searchParams.get('search') || '';
-      const cat = searchParams.get('category') || '';
-      
-      let all: Product[];
-      if (search) {
-        all = await productService.searchProducts(search);
-      } else if (cat) {
-        all = await productService.getProductsByCategory(cat);
-      } else {
-        all = await productService.getProducts();
+  // Fetch all products once on mount
+  useEffect(() => {
+    const loadProducts = async () => {
+      setLoading(true);
+      try {
+        const all = await productService.getProducts();
+        setProducts(all);
+      } catch (e) {
+        console.error("Failed to load products", e);
+      } finally {
+        setLoading(false);
       }
-      setProducts(all.filter(p => p.is_active));
-    } catch (e) {
-      console.error("Failed to load products", e);
-    } finally {
-      setLoading(false);
-    }
-  };
+    };
+    loadProducts();
+  }, []);
 
-  // Sync with URL params and trigger fetch
+  // Sync filter states with URL params
   useEffect(() => {
     const search = searchParams.get('search') || '';
     const cat = searchParams.get('category') || '';
     setSearchQuery(search);
     setSelectedCategory(cat);
-    fetchProducts();
   }, [searchParams]);
 
   // Apply filters and sorting
