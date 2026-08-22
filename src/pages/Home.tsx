@@ -70,10 +70,28 @@ export const Home: React.FC = () => {
   ];
 
   useEffect(() => {
+    // 1. Try to load featured items from localStorage cache instantly
+    const cached = localStorage.getItem('onam_products_cache');
+    if (cached) {
+      try {
+        const parsed = JSON.parse(cached) as Product[];
+        if (parsed && parsed.length > 0) {
+          const sortedFeatured = parsed
+            .filter(p => p.is_active)
+            .sort((a, b) => b.rating - a.rating)
+            .slice(0, 4);
+          setFeaturedProducts(sortedFeatured);
+          setLoading(false);
+        }
+      } catch (e) {}
+    }
+
     const fetchFeatured = async () => {
       try {
         const allProducts = await productService.getProducts();
-        // Show first 4 active, highly rated products
+        // Update local cache
+        localStorage.setItem('onam_products_cache', JSON.stringify(allProducts));
+        
         const filtered = allProducts
           .filter(p => p.is_active)
           .sort((a, b) => b.rating - a.rating)

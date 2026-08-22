@@ -19,13 +19,27 @@ export const ProductList: React.FC = () => {
   const [sortBy, setSortBy] = useState('rating-desc');
   const [showMobileFilters, setShowMobileFilters] = useState(false);
 
-  // Fetch all products once on mount
+  // Fetch all products once on mount with cache fallback
   useEffect(() => {
+    // 1. Try to load from local cache instantly
+    const cached = localStorage.getItem('onam_products_cache');
+    if (cached) {
+      try {
+        const parsed = JSON.parse(cached) as Product[];
+        if (parsed && parsed.length > 0) {
+          setProducts(parsed);
+          setLoading(false);
+        }
+      } catch (e) {}
+    }
+
     const loadProducts = async () => {
-      setLoading(true);
       try {
         const all = await productService.getProducts();
-        setProducts(all);
+        if (all && all.length > 0) {
+          setProducts(all);
+          localStorage.setItem('onam_products_cache', JSON.stringify(all));
+        }
       } catch (e) {
         console.error("Failed to load products", e);
       } finally {

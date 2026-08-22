@@ -16,10 +16,39 @@ export const ProductDetail: React.FC = () => {
   useEffect(() => {
     const fetchProduct = async () => {
       if (!id) return;
-      setLoading(true);
+      
+      // 1. Try to load match from local cache instantly
+      const cached = localStorage.getItem('onam_products_cache');
+      if (cached) {
+        try {
+          const parsed = JSON.parse(cached) as Product[];
+          const matched = parsed.find(p => p.id === id);
+          if (matched) {
+            setProduct(matched);
+            setLoading(false);
+          }
+        } catch (e) {}
+      }
+
+      // 2. Fetch fresh details from Supabase in the background
       try {
         const found = await productService.getProductById(id);
-        setProduct(found);
+        if (found) {
+          setProduct(found);
+          // Also update the item inside onam_products_cache
+          if (cached) {
+            try {
+              const parsed = JSON.parse(cached) as Product[];
+              const index = parsed.findIndex(p => p.id === id);
+              if (index > -1) {
+                parsed[index] = found;
+              } else {
+                parsed.push(found);
+              }
+              localStorage.setItem('onam_products_cache', JSON.stringify(parsed));
+            } catch (e) {}
+          }
+        }
       } catch (e) {
         console.error("Failed to load product details", e);
       } finally {
