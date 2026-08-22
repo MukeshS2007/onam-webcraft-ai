@@ -297,18 +297,26 @@ export const dbService = {
       items
     };
 
-    // 1. Verify stock availability before placing order
+    // 1. Verify stock availability before placing order (Optimized: single bulk query)
+    let fetchedProductsData: { id: string; stock: number; name: string }[] | null = null;
+    
     if (isSupabaseConfigured && supabase) {
-      for (const item of cartItems) {
-        const { data: prod, error } = await supabase
-          .from('products')
-          .select('stock, name')
-          .eq('id', item.product.id)
-          .single();
-        
-        if (!error && prod) {
-          if (prod.stock < item.quantity) {
-            throw new Error(`Insufficient stock for ${prod.name}. Only ${prod.stock} units available.`);
+      const productIds = cartItems.map(item => item.product.id);
+      const { data, error } = await supabase
+        .from('products')
+        .select('id, stock, name')
+        .in('id', productIds);
+      
+      if (error) {
+        console.warn("Supabase stock check failed, continuing with cart values", error);
+      } else if (data) {
+        fetchedProductsData = data;
+        for (const item of cartItems) {
+          const dbProd = data.find(p => p.id === item.product.id);
+          if (dbProd) {
+            if (dbProd.stock < item.quantity) {
+              throw new Error(`Insufficient stock for ${dbProd.name}. Only ${dbProd.stock} units available.`);
+            }
           }
         }
       }
@@ -381,17 +389,24 @@ export const dbService = {
           throw new Error(`Failed to save purchase items: ${itemsErr.message}`);
         }
 
-        // Decrease stock on Supabase products table
-        for (const item of cartItems) {
-          const { error: stockErr } = await supabase
-            .from('products')
-            .update({ stock: Math.max(0, item.product.stock - item.quantity) })
-            .eq('id', item.product.id);
+        // Decrease stock on Supabase products table (Optimized: run updates in parallel)
+        const supabaseClient = supabase!;
+        const stockUpdates = cartItems.map(async (item) => {
+          const dbProd = fetchedProductsData?.find(p => p.id === item.product.id);
+          const currentStock = dbProd ? dbProd.stock : item.product.stock;
           
-          if (stockErr) {
-            console.warn(`Failed to update Supabase stock for product ${item.product.id}`, stockErr);
+          return supabaseClient
+            .from('products')
+            .update({ stock: Math.max(0, currentStock - item.quantity) })
+            .eq('id', item.product.id);
+        });
+        
+        const updateResults = await Promise.all(stockUpdates);
+        updateResults.forEach((res, index) => {
+          if (res.error) {
+            console.warn(`Failed to update Supabase stock for product ${cartItems[index].product.id}`, res.error);
           }
-        }
+        });
 
         return newOrder;
       }
