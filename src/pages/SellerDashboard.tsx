@@ -22,55 +22,92 @@ export const SellerDashboard: React.FC = () => {
   const [pendingOrders, setPendingOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const computeAndSetMetrics = (allProducts: Product[], allOrders: Order[], sellerId: string) => {
+    // Filter products
+    const sProducts = allProducts.filter(p => p.seller_id === sellerId);
+    setSellerProducts(sProducts);
+
+    // Filter orders and calculate sales
+    let totalSales = 0;
+    let sellerOrderCount = 0;
+    let pendingCount = 0;
+    const sPendingOrders: Order[] = [];
+
+    allOrders.forEach(order => {
+      // Check if order contains seller's items
+      const sellerItems = order.items.filter(item => item.seller_id === sellerId);
+      
+      if (sellerItems.length > 0) {
+        sellerOrderCount++;
+        
+        if (order.status !== 'cancelled') {
+          const orderSubtotal = sellerItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+          totalSales += orderSubtotal;
+        }
+
+        if (order.status !== 'delivered' && order.status !== 'cancelled') {
+          pendingCount++;
+          sPendingOrders.push(order);
+        }
+      }
+    });
+
+    setPendingOrders(sPendingOrders.slice(0, 5)); // show top 5 pending orders
+
+    // Calculate stock status
+    const lowStock = sProducts.filter(p => p.stock > 0 && p.stock <= 10).length;
+
+    setMetrics({
+      sales: totalSales,
+      ordersCount: sellerOrderCount,
+      productsCount: sProducts.length,
+      lowStockCount: lowStock,
+      pendingOrdersCount: pendingCount
+    });
+  };
+
   const fetchDashboardData = async () => {
-    setLoading(true);
+    const sellerId = user?.seller_id || 'seller-5';
+    
+    // 1. Try to load from local storage cache instantly
+    const cachedProducts = localStorage.getItem('onam_products_cache');
+    const cachedOrders = localStorage.getItem('onam_orders_cache');
+    
+    let parsedProducts: Product[] = [];
+    let parsedOrders: Order[] = [];
+    
     try {
-      const sellerId = user?.seller_id || 'seller-5';
+      if (cachedProducts) {
+        parsedProducts = JSON.parse(cachedProducts);
+      }
+      if (cachedOrders) {
+        parsedOrders = JSON.parse(cachedOrders);
+      } else {
+        const localOrders = localStorage.getItem('onam_orders');
+        parsedOrders = localOrders ? JSON.parse(localOrders) : [];
+      }
+      
+      if (parsedProducts.length > 0) {
+        computeAndSetMetrics(parsedProducts, parsedOrders, sellerId);
+        setLoading(false);
+      } else {
+        setLoading(true);
+      }
+    } catch (e) {
+      setLoading(true);
+    }
+
+    // 2. Fetch fresh dashboard data from Supabase in the background
+    try {
       const allProducts = await dbService.getProducts();
       const allOrders = await dbService.getOrders();
 
-      // Filter products
-      const sProducts = allProducts.filter(p => p.seller_id === sellerId);
-      setSellerProducts(sProducts);
+      // Recalculate metrics
+      computeAndSetMetrics(allProducts, allOrders, sellerId);
 
-      // Filter orders and calculate sales
-      let totalSales = 0;
-      let sellerOrderCount = 0;
-      let pendingCount = 0;
-      const sPendingOrders: Order[] = [];
-
-      allOrders.forEach(order => {
-        // Check if order contains seller's items
-        const sellerItems = order.items.filter(item => item.seller_id === sellerId);
-        
-        if (sellerItems.length > 0) {
-          sellerOrderCount++;
-          
-          if (order.status !== 'cancelled') {
-            const orderSubtotal = sellerItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-            totalSales += orderSubtotal;
-          }
-
-          if (order.status !== 'delivered' && order.status !== 'cancelled') {
-            pendingCount++;
-            sPendingOrders.push(order);
-          }
-        }
-      });
-
-      setPendingOrders(sPendingOrders.slice(0, 5)); // show top 5 pending orders
-
-      // Calculate stock status
-      const lowStock = sProducts.filter(p => p.stock > 0 && p.stock <= 5).length;
-
-      setMetrics({
-        sales: totalSales,
-        ordersCount: sellerOrderCount,
-        productsCount: sProducts.length,
-        lowStockCount: lowStock,
-        pendingOrdersCount: pendingCount
-      });
-
+      // Save to localStorage caches
+      localStorage.setItem('onam_products_cache', JSON.stringify(allProducts));
+      localStorage.setItem('onam_orders_cache', JSON.stringify(allOrders));
     } catch (e) {
       console.error("Dashboard fetch failed", e);
     } finally {

@@ -11,10 +11,24 @@ export const SellerOrders: React.FC = () => {
   const sellerId = user?.seller_id || 'seller-5';
 
   const fetchSellerOrders = async () => {
-    setLoading(true);
+    // 1. Try to load orders from cache instantly
+    const cached = localStorage.getItem('onam_orders_cache');
+    if (cached) {
+      try {
+        const parsed = JSON.parse(cached) as Order[];
+        const filtered = parsed.filter(order =>
+          order.items.some(item => item.seller_id === sellerId)
+        );
+        setOrders(filtered);
+        setLoading(false);
+      } catch (e) {}
+    } else {
+      setLoading(true);
+    }
+
+    // 2. Fetch fresh orders from Supabase
     try {
       const allOrders = await dbService.getOrders();
-      // Filter orders containing items belonging to this seller
       const filtered = allOrders.filter(order =>
         order.items.some(item => item.seller_id === sellerId)
       );

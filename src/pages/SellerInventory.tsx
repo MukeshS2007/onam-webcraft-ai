@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { RefreshCw, PackageOpen, Check, Save } from 'lucide-react';
-import { dbService } from '../services/db';
+import { dbService, Order } from '../services/db';
 import { Product } from '../data/mockProducts';
 import { useApp } from '../context/AppContext';
 
@@ -20,40 +20,73 @@ export const SellerInventory: React.FC = () => {
 
   const sellerId = user?.seller_id || 'seller-5';
 
+  const computeInventory = (allProducts: Product[], allOrders: Order[], sellerId: string) => {
+    const sProducts = allProducts.filter(p => p.seller_id === sellerId);
+    setProducts(sProducts);
+
+    // Pre-populate stock inputs
+    const initialInputs: StockState = {};
+    sProducts.forEach(p => {
+      initialInputs[p.id] = p.stock;
+    });
+    setStockInputs(initialInputs);
+
+    // Calculate sales per product
+    const salesMap: { [productId: string]: number } = {};
+    sProducts.forEach(p => {
+      salesMap[p.id] = 0;
+    });
+
+    allOrders.forEach(order => {
+      if (order.status !== 'cancelled') {
+        order.items.forEach((item: any) => {
+          if (item.seller_id === sellerId && salesMap[item.product_id] !== undefined) {
+            salesMap[item.product_id] += item.quantity;
+          }
+        });
+      }
+    });
+
+    setProductSales(salesMap);
+  };
+
   const fetchInventoryData = async () => {
-    setLoading(true);
+    const sellerId = user?.seller_id || 'seller-5';
+    
+    // 1. Try to load from caches instantly
+    const cachedProducts = localStorage.getItem('onam_products_cache');
+    const cachedOrders = localStorage.getItem('onam_orders_cache');
+    
+    let parsedProducts: Product[] = [];
+    let parsedOrders: Order[] = [];
+    
+    try {
+      if (cachedProducts) {
+        parsedProducts = JSON.parse(cachedProducts);
+      }
+      if (cachedOrders) {
+        parsedOrders = JSON.parse(cachedOrders);
+      } else {
+        const localOrders = localStorage.getItem('onam_orders');
+        parsedOrders = localOrders ? JSON.parse(localOrders) : [];
+      }
+      
+      if (parsedProducts.length > 0) {
+        computeInventory(parsedProducts, parsedOrders, sellerId);
+        setLoading(false);
+      } else {
+        setLoading(true);
+      }
+    } catch (e) {
+      setLoading(true);
+    }
+
+    // 2. Fetch fresh inventory data from Supabase in the background
     try {
       const allProducts = await dbService.getProducts();
       const allOrders = await dbService.getOrders();
 
-      const sProducts = allProducts.filter(p => p.seller_id === sellerId);
-      setProducts(sProducts);
-
-      // Pre-populate stock inputs
-      const initialInputs: StockState = {};
-      sProducts.forEach(p => {
-        initialInputs[p.id] = p.stock;
-      });
-      setStockInputs(initialInputs);
-
-      // Calculate sales per product
-      const salesMap: { [productId: string]: number } = {};
-      sProducts.forEach(p => {
-        salesMap[p.id] = 0;
-      });
-
-      allOrders.forEach(order => {
-        if (order.status !== 'cancelled') {
-          order.items.forEach(item => {
-            if (item.seller_id === sellerId && salesMap[item.product_id] !== undefined) {
-              salesMap[item.product_id] += item.quantity;
-            }
-          });
-        }
-      });
-
-      setProductSales(salesMap);
-
+      computeInventory(allProducts, allOrders, sellerId);
     } catch (e) {
       console.error(e);
     } finally {

@@ -233,10 +233,13 @@ export const dbService = {
         .order('created_at', { ascending: false });
       if (!error && data) {
         // Map Supabase layout to client layout
-        return data.map((o: any) => ({
+        const mapped = data.map((o: any) => ({
           ...o,
           items: o.order_items || []
         }));
+        // Cache the orders locally
+        localStorage.setItem('onam_orders_cache', JSON.stringify(mapped));
+        return mapped;
       }
       console.warn("Supabase orders fetch failed, falling back to localStorage", error);
     }

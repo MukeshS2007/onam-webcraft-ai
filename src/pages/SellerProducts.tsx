@@ -29,12 +29,27 @@ export const SellerProducts: React.FC = () => {
   const sellerName = user?.name || 'Malabar Crunch Snacks';
 
   const fetchSellerProducts = async () => {
-    setLoading(true);
+    // 1. Try to load products from cache instantly
+    const cached = localStorage.getItem('onam_products_cache');
+    if (cached) {
+      try {
+        const parsed = JSON.parse(cached) as Product[];
+        const filtered = parsed.filter(p => p.seller_id === sellerId);
+        setProducts(filtered);
+        setLoading(false);
+      } catch (e) {}
+    } else {
+      setLoading(true);
+    }
+
+    // 2. Fetch fresh products from Supabase
     try {
       const all = await dbService.getProducts();
-      // Filter products belonging to this seller
       const filtered = all.filter(p => p.seller_id === sellerId);
       setProducts(filtered);
+      
+      // Update cache
+      localStorage.setItem('onam_products_cache', JSON.stringify(all));
     } catch (e) {
       console.error(e);
     } finally {
