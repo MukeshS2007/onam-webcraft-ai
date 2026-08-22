@@ -142,10 +142,6 @@ const initLocalStorage = () => {
   if (!localStorage.getItem('onam_orders')) {
     localStorage.setItem('onam_orders', JSON.stringify(SEED_ORDERS));
   }
-  if (!localStorage.getItem('onam_current_user')) {
-    // Default to customer role initially
-    localStorage.setItem('onam_current_user', JSON.stringify(DEFAULT_CUSTOMER));
-  }
 };
 
 // Initialize right away
