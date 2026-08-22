@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ShieldCheck, User, ArrowRight, Sparkles, Mail, Lock } from 'lucide-react';
 import { useApp } from '../context/AppContext';
@@ -17,6 +17,17 @@ export const Login: React.FC = () => {
   
   const [errorMsg, setErrorMsg] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Auto-redirect if already logged in
+  useEffect(() => {
+    if (user) {
+      if (user.role === 'seller') {
+        navigate('/seller');
+      } else {
+        navigate('/');
+      }
+    }
+  }, [user, navigate]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
